@@ -39,23 +39,21 @@ public class FileController {
         // 验证
         if(!FileHandler.verifyPartFile(partFile)) return "Failed";
         // 记录文件名与文件ID，并向文件总写入当前片段
-        synchronized(redisTemplate){
-            String fileId;
-            Optional<String> fileOpt = Optional.ofNullable(redisTemplate.opsForValue().get(partFile.getName()));
-            if(fileOpt.isEmpty()){
-                fileId = UUID.randomUUID().toString();
-                redisTemplate.opsForValue().set(partFile.getName(), fileId);
-            }else{
-                fileId = redisTemplate.opsForValue().get(partFile.getName());
-            }
-            boolean writeResult = FileHandler.integrationFile(partFile, fileId);
-//            boolean writeResult = true;
-            if(partFile.getCurrent() == partFile.getTotal() - 1){
-                filesService.save(partFile, fileId);
-                redisTemplate.delete(partFile.getName());
-            }
-            if(!writeResult) return "Failed";
+        String fileId;
+        Optional<String> fileOpt = Optional.ofNullable(redisTemplate.opsForValue().get(partFile.getName()));
+        if(fileOpt.isEmpty()){
+            fileId = UUID.randomUUID().toString();
+            redisTemplate.opsForValue().set(partFile.getName(), fileId);
+        }else{
+            fileId = redisTemplate.opsForValue().get(partFile.getName());
         }
+        boolean writeResult = FileHandler.integrationFile(partFile, fileId);
+//            boolean writeResult = true;
+        if(partFile.getCurrent() == partFile.getTotal() - 1){
+            filesService.save(partFile, fileId);
+            redisTemplate.delete(partFile.getName());
+        }
+        if(!writeResult) return "Failed";
         return "OK";
     }
 

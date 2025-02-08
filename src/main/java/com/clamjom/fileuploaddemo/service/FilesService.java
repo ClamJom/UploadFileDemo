@@ -7,7 +7,9 @@ import com.clamjom.fileuploaddemo.repository.FilesRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class FilesService {
@@ -20,7 +22,7 @@ public class FilesService {
     }
 
     public Files getByName(String name){
-        return filesRepository.findPartFileByName(name);
+        return filesRepository.findFilesByName(name);
     }
 
     public boolean isExistsById(long id){
@@ -31,19 +33,18 @@ public class FilesService {
         return filesRepository.existsByName(name);
     }
 
-    public void save(PartFile partFile){
+    public void save(PartFile partFile, String ID){
         Files files = null;
         if(this.isExistsByName(partFile.getName())){
             files = this.getByName(partFile.getName());
-            files.setModifyTime(partFile.getModifyTime());
+            FileHandler.deleteByPath(files.getPath());
         }else{
             files = new Files();
             files.setName(partFile.getName());
-            files.setFileType(partFile.getFileType());
-            files.setCreateTime(new Date(System.currentTimeMillis()));
-            files.setModifyTime(partFile.getModifyTime());
-            files.setPath(FileHandler.getFileSavePath() + "/" + files.getName());
         }
+        files.setFileType(partFile.getFileType());
+        files.setPath(FileHandler.getFileSavePath() + "\\" + ID + ".saved");
+        files.setCreateTime(new Date(System.currentTimeMillis()));
         this.save(files);
     }
 
@@ -58,5 +59,13 @@ public class FilesService {
     public void update(Files file){
         // 是的，`改`和`存`是一个方法
         filesRepository.save(file);
+    }
+
+    public List<String> getAllFileName(){
+        List<String> fileNames = new ArrayList<>();
+        filesRepository.findAll().forEach((files)->{
+            fileNames.add(files.getName());
+        });
+        return fileNames;
     }
 }

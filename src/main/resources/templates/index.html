@@ -4,6 +4,18 @@
     <meta charset="UTF-8">
     <title>Demo</title>
     <script th:src="@{/js/main.js}"></script>
+    <script>
+        function stopUpload(){
+            mainRecord.setUploadingState(false);
+            document.querySelector("#startUpload").removeAttribute("disabled");
+            document.querySelector("#stopUpload").setAttribute("disabled", "true")
+        }
+        function startUpload(){
+            mainRecord.setUploadingState(true);
+            document.querySelector("#stopUpload").removeAttribute("disabled");
+            document.querySelector("#startUpload").setAttribute("disabled", "true")
+        }
+    </script>
     <link rel="stylesheet" th:href="@{/css/main.css}">
 </head>
 <body>
@@ -12,6 +24,8 @@
     <label for="file">上传文件</label>
     <input style="display: none" oninput="uploadFile()" type="file" name="uploads" id="file">
 </form>
+<button onclick="stopUpload()" id="stopUpload">暂停上传</button>
+<button onclick="startUpload()" disabled id="startUpload">开始上传</button>
 <div class="upload_preview" id="preview"></div>
 </body>
 </html>

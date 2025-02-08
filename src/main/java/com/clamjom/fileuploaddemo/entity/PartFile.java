@@ -14,8 +14,6 @@ public class PartFile {
 
     private String name;
 
-    private String path;
-
     private MultipartFile part;
 
     private int total;
@@ -27,8 +25,4 @@ public class PartFile {
     private String md5;
 
     private String fileType;
-
-    private Date modifyTime;
-
-    private Date createTime;
 }

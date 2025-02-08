@@ -57,6 +57,7 @@ public class FileHandler {
         return uploadFileParentPath.getAbsolutePath();
     }
 
+    @Deprecated
     public static String savePartFile(PartFile partFile, String fileUUID) {
         try {
             String partFileName = FileHandler.getCachePath() + "\\" + fileUUID + "_" + partFile.getCurrent() + ".data";
@@ -75,6 +76,7 @@ public class FileHandler {
      * @param name 保存的文件名，最终会保存至指定路径
      * @return 保存的结果
      */
+    @Deprecated
     public static boolean integrationFileParts(String id, String name, int total){
         try{
             // 这里没有判断是否存在父目录是因为所有文件都会生成片段，在生成片段时已经有过判断
@@ -111,5 +113,34 @@ public class FileHandler {
             return false;
         }
         return true;
+    }
+
+    public static boolean integrationFile(PartFile partFile, String ID){
+        RandomAccessFile aimFile = null;
+        try{
+            aimFile = new RandomAccessFile(FileHandler.getFileSavePath() + "/" + ID + ".saved", "rw");
+            aimFile.seek(partFile.getCurrent() * partFile.getPartSize());
+            aimFile.write(partFile.getPart().getBytes());
+            return true;
+        }catch(Exception e){
+            log.error(e.getMessage());
+            return false;
+        }finally {
+            if(aimFile != null)
+                try {
+                    aimFile.close();
+                }catch(Exception e){
+                    log.error(e.getMessage());
+                }
+        }
+    }
+
+    public static void deleteByPath(String path){
+        try{
+            File aim = new File(path);
+            aim.delete();
+        }catch(Exception e){
+            return;
+        }
     }
 }

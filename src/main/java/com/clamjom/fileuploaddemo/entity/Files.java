@@ -23,7 +23,5 @@ public class Files {
 
     private String fileType;
 
-    private Date modifyTime;
-
     private Date createTime;
 }

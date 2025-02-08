@@ -1,15 +1,26 @@
 package com.clamjom.fileuploaddemo.controller.file;
 
+import com.alibaba.fastjson2.JSON;
 import com.clamjom.fileuploaddemo.common.FileHandler;
+import com.clamjom.fileuploaddemo.entity.Files;
 import com.clamjom.fileuploaddemo.entity.PartFile;
 import com.clamjom.fileuploaddemo.service.FilesService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.FileCopyUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -25,35 +36,60 @@ public class FileController {
     @PostMapping("/upload")
     @ResponseBody
     public String uploadFile(PartFile partFile) throws IOException {
-        synchronized (redisTemplate) {
-            // 验证
-            if (!FileHandler.verifyPartFile(partFile)) return "Verify Failed";
-
+        // 验证
+        if(!FileHandler.verifyPartFile(partFile)) return "Failed";
+        // 记录文件名与文件ID，并向文件总写入当前片段
+        synchronized(redisTemplate){
             String fileId;
-
-            Optional<String> fileNameOpt = Optional.ofNullable(redisTemplate.opsForValue().get(partFile.getName()));
-
-            if (fileNameOpt.isEmpty()) {
+            Optional<String> fileOpt = Optional.ofNullable(redisTemplate.opsForValue().get(partFile.getName()));
+            if(fileOpt.isEmpty()){
                 fileId = UUID.randomUUID().toString();
                 redisTemplate.opsForValue().set(partFile.getName(), fileId);
-            } else {
+            }else{
                 fileId = redisTemplate.opsForValue().get(partFile.getName());
             }
-
-            // 保存
-            String partFileSavedPath = FileHandler.savePartFile(partFile, fileId);
-            Optional<String> opt = Optional.ofNullable(partFileSavedPath);
-            if (opt.isEmpty()) return "Save Part Failed";
-            // 整合
-            if (partFile.getCurrent() == partFile.getTotal() - 1) {
-                if (!FileHandler.integrationFileParts(fileId, partFile.getName(), partFile.getTotal())) {
-                    return "Integration Failed";
-                }
-                filesService.save(partFile);
-                // 整合完成后应当删除缓存
+            boolean writeResult = FileHandler.integrationFile(partFile, fileId);
+//            boolean writeResult = true;
+            if(partFile.getCurrent() == partFile.getTotal() - 1){
+                filesService.save(partFile, fileId);
                 redisTemplate.delete(partFile.getName());
             }
-            return "OK";
+            if(!writeResult) return "Failed";
         }
+        return "OK";
+    }
+
+    @GetMapping("/uploaded")
+    @ResponseBody
+    public String isFileUploaded(@Param("fileName") String fileName){
+        Optional<String> fileOpt = Optional.ofNullable(redisTemplate.opsForValue().get(fileName));
+        return String.valueOf(fileOpt.isEmpty());
+    }
+
+    @GetMapping("/download")
+    public void download(@Param("fileName") String fileName, HttpServletRequest request, HttpServletResponse response) throws Exception{
+        if(fileName == null || fileName.isEmpty()){
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.getWriter().write("File not found");
+            return;
+        }
+        Files files = filesService.getByName(fileName);
+        response.setHeader("content-disposition","attachment;fileName="+ URLEncoder.encode(fileName, StandardCharsets.UTF_8));
+        if(files == null){
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.getWriter().write("File not found");
+            return;
+        }
+        File file = new File(files.getPath());
+        FileInputStream fis = new FileInputStream(file);
+        response.setContentType(files.getFileType());
+        FileCopyUtils.copy(fis, response.getOutputStream());
+        fis.close();
+    }
+
+    @GetMapping("/allFiles")
+    @ResponseBody
+    public String fileList(){
+        return JSON.toJSONString(filesService.getAllFileName());
     }
 }

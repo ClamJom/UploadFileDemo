@@ -9,7 +9,7 @@ public interface FilesRepository extends JpaRepository<Files, Long> {
 
     Files findPartFileById(long id);
 
-    Files findPartFileByName(String name);
+    Files findFilesByName(String name);
 
     boolean existsByName(String name);
 }

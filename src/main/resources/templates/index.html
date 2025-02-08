@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Demo</title>
+    <script th:src="@{/js/main.js}"></script>
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+</head>
+<body>
+<div class="thymeleaf_test" th:text="${Test}"></div>
+<form enctype="multipart/form-data" class="upload_container">
+    <label for="file">上传文件</label>
+    <input style="display: none" oninput="uploadFile()" type="file" name="uploads" id="file">
+</form>
+<div class="upload_preview" id="preview"></div>
+</body>
+</html>

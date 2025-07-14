@@ -81,6 +81,8 @@ class UploadRecord{
 
 let mainRecord = new UploadRecord();
 
+getAllFiles();
+
 /**
  * 生成UUID
  * @returns {string} UUID
@@ -101,6 +103,30 @@ function uploadFile(){
     const files = aim.files;
     for(let file of files){
         handleUpload("/upload", file, 1024 * 1024);
+    }
+}
+
+function uploadXml(){
+    let aim = document.querySelector("#fileXml");
+    const files = aim.files;
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/uploadXml", true);
+    // xhr.setRequestHeader("Content-Type", "multipart/form-data");
+    for(let file of files){
+        const partElements = initPartElements(UUID(), file, 1024 * 1024);
+        xhr.upload.onprogress = (e)=>{
+            const loaded = e.loaded;
+            const total = e.total;
+            const percentage = loaded / total;
+            for(let i = 0; i <= partElements.length; i++){
+                if(i / partElements.length < percentage){
+                    partElements[i].classList.add("ok");
+                }
+            }
+        }
+        const formData = new FormData();
+        formData.append("file", file);
+        xhr.send(formData);
     }
 }
 
@@ -190,7 +216,9 @@ function handleUpload(url, file,
     function HandleStartUpload(){}
 
     // 文件上传停止回调
-    function HandleStopUpload(msg){}
+    function HandleStopUpload(msg){
+        getAllFiles();
+    }
 
     // 块上传开始回调
     function HandleBlockStartUpload(record, blockIndex){}
@@ -345,6 +373,21 @@ function handleUpload(url, file,
             worker.terminate();
         }
     }
+}
+
+function getAllFiles(){
+    fetch("/allFiles").then(res=>res.json()).then(res=>{
+        let fileListContainer = document.querySelector("#fileList");
+        fileListContainer.innerHTML = "";
+        for(let file of res){
+            let newChild = document.createElementNS("http://www.w3.org/1999/xhtml", "li");
+            let childLink = document.createElementNS("http://www.w3.org/1999/xhtml", "a");
+            childLink.href = `/download?fileName=${file}`;
+            childLink.innerText = file;
+            newChild.appendChild(childLink);
+            fileListContainer.appendChild(newChild);
+        }
+    });
 }
 
 // 通过消息生成SHA-256摘要

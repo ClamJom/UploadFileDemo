@@ -18,9 +18,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -54,6 +56,19 @@ public class FileController {
             redisTemplate.delete(partFile.getName());
         }
         if(!writeResult) return "Failed";
+        return "OK";
+    }
+
+    @PostMapping("/uploadXml")
+    @ResponseBody
+    public String uploadFileInXml(@RequestParam("file") MultipartFile file) throws IOException{
+//        MultipartFile file = param.get("file");
+        assert file != null;
+        String filename = file.getName();
+        log.info(filename);
+        String path = FileHandler.getFileSavePath() + "/" + filename;
+        File fileObj = new File(path);
+        file.transferTo(fileObj);
         return "OK";
     }
 

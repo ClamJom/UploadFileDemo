@@ -55,6 +55,14 @@ body{
     }
 }
 
+.upload_container label{
+    cursor: pointer;
+}
+
+.upload_container.disabled label{
+    cursor: not-allowed;
+}
+
 .upload_state_block{
     position: relative;
     width: 10px;
@@ -75,4 +83,43 @@ body{
 
 .upload_state_block.ok{
     background-color: green;
+}
+
+.uploaded{
+    margin-top: 10px;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+.file_item{
+    display: flex;
+    flex-wrap: nowrap;
+    width: fit-content;
+    align-items: center;
+    justify-content: space-between;
+    flex-direction: row;
+    border: 1px solid grey;
+    padding: 3px;
+    margin-top: -1px;
+    margin-left: -1px;
+}
+
+.file_item .filename{
+    width: fit-content;
+    height: fit-content;
+    margin-right: 10px;
+    text-decoration: none;
+    color: green;
+}
+
+.file_item .delete_button{
+    padding: 3px 5px 3px 5px;
+    border-radius: 3px;
+    transition: all 0.5s;
+}
+
+.file_item .delete_button:hover{
+    cursor: pointer;
+    background-color: rgb(255, 57, 57);
+    color: white;
 }

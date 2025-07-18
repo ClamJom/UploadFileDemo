@@ -24,13 +24,13 @@
     <label for="file">上传文件</label>
     <input style="display: none" oninput="uploadFile()" type="file" name="uploads" id="file">
 </form>
-<form enctype="multipart/form-data" class="upload_container">
+<form enctype="multipart/form-data" class="upload_container disabled">
     <label for="fileXml">使用XMLHttpRequest上传文件</label>
-    <input style="display: none" oninput="uploadXml()" type="file" name="uploads" id="fileXml">
+    <input style="display: none" disabled oninput="uploadXml()" type="file" name="uploads" id="fileXml">
 </form>
 <button onclick="stopUpload()" id="stopUpload">暂停上传</button>
 <button onclick="startUpload()" disabled id="startUpload">开始上传</button>
-<ul id="fileList"></ul>
+<div id="fileList" class="uploaded"></div>
 <div class="upload_preview" id="preview"></div>
 </body>
 </html>

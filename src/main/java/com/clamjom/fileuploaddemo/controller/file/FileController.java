@@ -94,10 +94,32 @@ public class FileController {
             return;
         }
         File file = new File(files.getPath());
+        if(!file.exists()){
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.getWriter().write("File was been deleted by server.");
+            filesService.delete(files);
+            return;
+        }
         FileInputStream fis = new FileInputStream(file);
         response.setContentType(files.getFileType());
         FileCopyUtils.copy(fis, response.getOutputStream());
         fis.close();
+    }
+
+    @DeleteMapping("/delete")
+    @ResponseBody
+    public String deleteFile(@Param("filename") String filename){
+        Files files = filesService.getByName(filename);
+        Optional<Files> fileOpt = Optional.ofNullable(files);
+        if(fileOpt.isEmpty()){
+            return "File not found";
+        }
+        File file = new File(files.getPath());
+        if(!file.exists()){
+            return "File was already been deleted by server.";
+        }
+        filesService.delete(files);
+        return "OK";
     }
 
     @GetMapping("/allFiles")

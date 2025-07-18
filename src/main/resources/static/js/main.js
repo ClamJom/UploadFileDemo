@@ -375,18 +375,31 @@ function handleUpload(url, file,
     }
 }
 
+function initFileItem(filename){
+    let container = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
+    container.className = "file_item";
+    container.innerHTML = `
+        <a href="/download?fileName=${filename}" class="filename">${filename}</a>
+        <div class="delete_button" onclick="deleteFile(${filename})">删除</div>
+    `
+    return container;
+}
+
 function getAllFiles(){
     fetch("/allFiles").then(res=>res.json()).then(res=>{
         let fileListContainer = document.querySelector("#fileList");
         fileListContainer.innerHTML = "";
         for(let file of res){
-            let newChild = document.createElementNS("http://www.w3.org/1999/xhtml", "li");
-            let childLink = document.createElementNS("http://www.w3.org/1999/xhtml", "a");
-            childLink.href = `/download?fileName=${file}`;
-            childLink.innerText = file;
-            newChild.appendChild(childLink);
+            let newChild = initFileItem(file);
             fileListContainer.appendChild(newChild);
         }
+    });
+}
+
+function deleteFile(filename){
+    fetch(`/delete?filename=${filename}`).then(res=>res.json()).then(res=>{
+        console.log(res);
+        getAllFiles();
     });
 }
 

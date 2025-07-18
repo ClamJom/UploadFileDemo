@@ -5,9 +5,9 @@ import com.clamjom.fileuploaddemo.entity.PartFile;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
-@Mapper
-public interface FileMapper {
-    FileMapper INSTANCE = Mappers.getMapper(FileMapper.class);
+// @Mapper
+// public interface FileMapper {
+//     FileMapper INSTANCE = Mappers.getMapper(FileMapper.class);
 
-    Files PartFiletoFiles(PartFile partFile);
-}
+//     Files PartFiletoFiles(PartFile partFile);
+// }

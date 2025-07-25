@@ -380,7 +380,7 @@ function initFileItem(filename){
     container.className = "file_item";
     container.innerHTML = `
         <a href="/download?fileName=${filename}" class="filename">${filename}</a>
-        <div class="delete_button" onclick="deleteFile(${filename})">删除</div>
+        <div class="delete_button" onclick='deleteFile("${filename}")'>删除</div>
     `
     return container;
 }
@@ -397,8 +397,9 @@ function getAllFiles(){
 }
 
 function deleteFile(filename){
-    fetch(`/delete?filename=${filename}`).then(res=>res.json()).then(res=>{
-        console.log(res);
+    fetch(`/delete?filename=${filename}`, {
+        method: "DELETE"
+    }).then(res=>res.text()).then(res=>{
         getAllFiles();
     });
 }

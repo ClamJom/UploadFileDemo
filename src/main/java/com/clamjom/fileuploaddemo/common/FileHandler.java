@@ -119,6 +119,7 @@ public class FileHandler {
         RandomAccessFile aimFile = null;
         try{
             aimFile = new RandomAccessFile(FileHandler.getFileSavePath() + "/" + ID + ".saved", "rw");
+            log.info(FileHandler.getFileSavePath());
             aimFile.seek(partFile.getCurrent() * partFile.getPartSize());
             aimFile.write(partFile.getPart().getBytes());
             return true;

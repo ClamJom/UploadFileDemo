@@ -43,7 +43,7 @@ public class FilesService {
             files.setName(partFile.getName());
         }
         files.setFileType(partFile.getFileType());
-        files.setPath(FileHandler.getFileSavePath() + "\\" + ID + ".saved");
+        files.setPath(FileHandler.getFileSavePath() + "/" + ID + ".saved");
         files.setCreateTime(new Date(System.currentTimeMillis()));
         this.save(files);
     }

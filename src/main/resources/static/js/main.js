@@ -81,7 +81,7 @@ class UploadRecord{
 
 let mainRecord = new UploadRecord();
 
-getAllFiles();
+// getAllFiles();
 
 /**
  * 生成UUID
@@ -143,18 +143,20 @@ function initPartElements(id, file, chunkSize){
     let el = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
     el.innerText = file.name;
     el.id = id;
-    el.classList.add("preview_common");
+    el.className = "border mr-2 relative w-fit p-2 rounded-md text-wrap";
     // el.onclick = () => removeCommonPreview(id);
     previewContainer.appendChild(el);
 
+    el.innerHTML += "<hr>";
+
     let stateContainer = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
-    stateContainer.classList.add("preview_state");
+    stateContainer.className = "flex flex-wrap flex-row";
     el.appendChild(stateContainer)
 
     let blockList = []
     for(let i = 0;i < total;i++){
         let stateBlock = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
-        stateBlock.classList.add("upload_state_block");
+        stateBlock.className = "w-3 h-3 mr-2 mt-2 [&[ok]]:bg-green-500 [&[error]]:bg-red-500 [&[uploading]]:bg-yellow-500";
         stateContainer.appendChild(stateBlock);
         blockList.push(stateBlock);
     }
@@ -221,21 +223,31 @@ function handleUpload(url, file,
     }
 
     // 块上传开始回调
-    function HandleBlockStartUpload(record, blockIndex){}
+    function HandleBlockStartUpload(record, blockIndex){
+        partElements[blockIndex].setAttribute("uploading", "");
+    }
 
     // 块上传停止回调
     function HandleBlockStopUpload(record, blockIndex){}
 
     // 片段开始上传回调
     function HandlePartStartUpload(record, index){
-        partElements[index].classList.add("uploading");
+        // partElements[index].classList.add("uploading");
     }
 
     // 片段上传响应回调
     function HandleResponse(record, data){
-        partElements[data.index].classList.add(
-            data.state === "OK" ? 'ok' : 'error'
-        );
+        // partElements[data.index].classList.add(
+        //     data.state === "OK" ? 'ok' : 'error'
+        // );
+        if(partElements[data.index].hasAttribute("uploading")){
+            partElements[data.index].removeAttribute("uploading");
+        }
+        if(data.state === "OK"){
+            partElements[data.index].setAttribute("ok", "");
+        }else{
+            partElements[data.index].setAttribute("error", "");
+        }
     }
 
     /**
@@ -287,7 +299,22 @@ function handleUpload(url, file,
                 // 块处理核心函数，用于同步执行片段上传
                 function subUploadFunc(currentIdx){
                     if(currentIdx === taskIdx * concurrentSize){
-                        HandleBlockStartUpload(currentRecord, taskIdx);
+                        HandleBlockStartUpload(currentRecord, currentIdx);
+                    }
+
+                    if(data.length === 1){
+                        // 若文件只有一块，如果按照块尾判断将会导致直接结束而不上传，因此直接上传
+                        HandlePartStartUpload(currentRecord, index2OriginIdx[currentIdx]);
+                        uploadCore(leftParts[currentIdx], index2OriginIdx[currentIdx]).then((resp)=>{
+                            // 响应回调
+                            HandleResponse(currentRecord, resp);
+                            // 上传成功时更新片段状态
+                            mainRecord.updatePartsState(id, index2OriginIdx[currentIdx]);
+                        }).catch((err)=>{
+                            HandleResponse(currentRecord, err);
+                            rej(err);
+                        });
+                        return;
                     }
                     // 认为：下标越界时 或 在块尾时 或 当前片段为所有片段的最后一块片段时，当前块处理完成，应当处理当前Promise
                     if(currentIdx >= leftSize || currentIdx >= (taskIdx + 1) * concurrentSize || leftParts[currentIdx].hash === lastPart.hash){
@@ -377,10 +404,10 @@ function handleUpload(url, file,
 
 function initFileItem(filename){
     let container = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
-    container.className = "file_item";
+    container.className = "flex align-center w-fit text-center mr-2 mb-2";
     container.innerHTML = `
-        <a href="/download?fileName=${filename}" class="filename">${filename}</a>
-        <div class="delete_button" onclick='deleteFile("${filename}")'>删除</div>
+        <a href="/download?fileName=${filename}" class="p-1 text-center dark:bg-green-800 bg-green-600 text-white rounded-tl-md rounded-bl-md">${filename}</a>
+        <div class="cursor-pointer dark:bg-red-700 bg-red-500 text-white p-1 rounded-tr-md rounded-br-md" onclick='deleteFile("${filename}")'>删除</div>
     `
     return container;
 }

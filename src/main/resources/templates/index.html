@@ -2,6 +2,7 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Demo</title>
     <script th:src="@{/js/main.js}"></script>
     <script>
@@ -16,21 +17,32 @@
             document.querySelector("#startUpload").setAttribute("disabled", "true")
         }
     </script>
-    <link rel="stylesheet" th:href="@{/css/main.css}">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<!--    <link rel="stylesheet" th:href="@{/css/main.css}">-->
 </head>
 <body>
-<div class="thymeleaf_test" th:text="${Test}"></div>
-<form enctype="multipart/form-data" class="upload_container">
-    <label for="file">上传文件</label>
-    <input style="display: none" oninput="uploadFile()" type="file" name="uploads" id="file">
-</form>
-<form enctype="multipart/form-data" class="upload_container disabled">
-    <label for="fileXml">使用XMLHttpRequest上传文件</label>
-    <input style="display: none" disabled oninput="uploadXml()" type="file" name="uploads" id="fileXml">
-</form>
-<button onclick="stopUpload()" id="stopUpload">暂停上传</button>
-<button onclick="startUpload()" disabled id="startUpload">开始上传</button>
-<div id="fileList" class="uploaded"></div>
-<div class="upload_preview" id="preview"></div>
+<div class="w-screen h-screen p-0 m-0 dark:bg-gray-800 dark:text-white absolute p-2">
+    <div class="w-61 flex flex-wrap align-center justify-between mb-2">
+        <form enctype="multipart/form-data" class="w-fit relative mb-2">
+            <label for="file" class="cursor-pointer text-white dark:bg-sky-600 dark:hover:bg-sky-700 dark:active:bg-sky-800 bg-sky-400 hover:bg-sky-500 active:bg-sky-600 rounded-lg w-fit relative duration-300 block box-border p-2">上传文件</label>
+            <input style="display: none" oninput="uploadFile()" type="file" name="uploads" id="file">
+        </form>
+        <form enctype="multipart/form-data" class="w-fit relative mb-2">
+            <label for="fileXml" class="cursor-not-allowed text-white bg-gray-400 rounded-lg w-fit relative duration-300 block box-border p-2 text-center">使用XMLHttpRequest上传文件</label>
+            <input style="display: none" disabled oninput="uploadXml()" type="file" name="uploads" id="fileXml">
+        </form>
+        <button onclick="stopUpload()" class="cursor-pointer text-white dark:bg-sky-600 dark:hover:bg-sky-700 dark:active:bg-sky-800 bg-sky-400 hover:bg-sky-500 active:bg-sky-600 rounded-lg w-fit relative duration-300 block box-border p-2 disabled:bg-red-700 disabled:hover:bg-red-700 disabled:cursor-not-allowed" id="stopUpload">暂停上传</button>
+        <button onclick="startUpload()" class="cursor-pointer text-white dark:bg-sky-600 dark:hover:bg-sky-700 dark:active:bg-sky-800 bg-sky-400 hover:bg-sky-500 active:bg-sky-600 rounded-lg w-fit relative duration-300 block box-border p-2 disabled:bg-red-700 disabled:hover:bg-red-700 disabled:cursor-not-allowed" disabled id="startUpload">开始上传</button>
+    </div>
+    <hr>
+    <div class="mt-2">
+        <div id="fileList" class="md-2 flex flex-wrap">
+        </div>
+        <div class="w-full flex flex-wrap" id="preview"></div>
+    </div>
+</div>
+<script>
+    getAllFiles();
+</script>
 </body>
 </html>

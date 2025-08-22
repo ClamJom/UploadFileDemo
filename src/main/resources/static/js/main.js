@@ -223,9 +223,7 @@ function handleUpload(url, file,
     }
 
     // 块上传开始回调
-    function HandleBlockStartUpload(record, blockIndex){
-        partElements[blockIndex].setAttribute("uploading", "");
-    }
+    function HandleBlockStartUpload(record, blockIndex){}
 
     // 块上传停止回调
     function HandleBlockStopUpload(record, blockIndex){}
@@ -233,6 +231,7 @@ function handleUpload(url, file,
     // 片段开始上传回调
     function HandlePartStartUpload(record, index){
         // partElements[index].classList.add("uploading");
+        partElements[index].setAttribute("uploading", "");
     }
 
     // 片段上传响应回调
@@ -299,10 +298,10 @@ function handleUpload(url, file,
                 // 块处理核心函数，用于同步执行片段上传
                 function subUploadFunc(currentIdx){
                     if(currentIdx === taskIdx * concurrentSize){
-                        HandleBlockStartUpload(currentRecord, currentIdx);
+                        HandleBlockStartUpload(currentRecord, taskIdx);
                     }
 
-                    if(data.length === 1){
+                    if(total === 1){
                         // 若文件只有一块，如果按照块尾判断将会导致直接结束而不上传，因此直接上传
                         HandlePartStartUpload(currentRecord, index2OriginIdx[currentIdx]);
                         uploadCore(leftParts[currentIdx], index2OriginIdx[currentIdx]).then((resp)=>{
@@ -310,6 +309,8 @@ function handleUpload(url, file,
                             HandleResponse(currentRecord, resp);
                             // 上传成功时更新片段状态
                             mainRecord.updatePartsState(id, index2OriginIdx[currentIdx]);
+                            res();
+                            HandleBlockStopUpload(currentRecord, taskIdx);
                         }).catch((err)=>{
                             HandleResponse(currentRecord, err);
                             rej(err);

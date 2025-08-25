@@ -8,11 +8,9 @@ import com.clamjom.fileuploaddemo.service.FilesService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.api.RLock;
 import org.redisson.api.RMap;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.FileCopyUtils;
@@ -21,11 +19,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -46,28 +42,15 @@ public class FileController {
         // 验证
         if(!FileHandler.verifyPartFile(partFile)) return "Failed";
         // 记录文件名与文件ID，并向文件总写入当前片段
-//        RLock lock = redissonClient.getLock(partFile.getName());
-//        boolean tryLock = false;
-//        try{
-//            tryLock = lock.tryLock(30, 180 ,TimeUnit.SECONDS);
-//        }catch(Exception e){
-//            log.info(e.getMessage());
-//        }
-//        if(!tryLock) return "Failed";
         String fileId;
         RMap<String, String> redissonMap = redissonClient.getMap(partFile.getName());
-        log.info(JSON.toJSONString(redissonMap));
-        log.info(partFile.getName());
         if(!redissonMap.containsKey(partFile.getName())){
             fileId = UUID.randomUUID().toString();
             redissonMap.put(partFile.getName(), fileId);
             redissonMap.expire(24, TimeUnit.HOURS);
-            log.info("New File: {}, File Id: {}", partFile.getName(), fileId);
         }else{
             fileId = redissonMap.get(partFile.getName());
-            log.info("Exists File: {}, File Id: {}", partFile.getName(), fileId);
         }
-//        lock.unlock();
         boolean writeResult = FileHandler.integrationFile(partFile, fileId);
         if(partFile.getCurrent() == partFile.getTotal() - 1){
             filesService.save(partFile, fileId);

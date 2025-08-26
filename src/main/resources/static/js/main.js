@@ -143,7 +143,7 @@ function initPartElements(id, file, chunkSize){
     let el = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
     el.innerText = file.name;
     el.id = id;
-    el.className = "border mr-2 relative w-fit p-2 rounded-md text-wrap";
+    el.className = "border mr-2 mb-2 relative w-fit p-2 rounded-md text-wrap";
     // el.onclick = () => removeCommonPreview(id);
     previewContainer.appendChild(el);
 
@@ -230,15 +230,11 @@ function handleUpload(url, file,
 
     // 片段开始上传回调
     function HandlePartStartUpload(record, index){
-        // partElements[index].classList.add("uploading");
         partElements[index].setAttribute("uploading", "");
     }
 
     // 片段上传响应回调
     function HandleResponse(record, data){
-        // partElements[data.index].classList.add(
-        //     data.state === "OK" ? 'ok' : 'error'
-        // );
         if(partElements[data.index].hasAttribute("uploading")){
             partElements[data.index].removeAttribute("uploading");
         }

@@ -17,11 +17,11 @@
             document.querySelector("#startUpload").setAttribute("disabled", "true")
         }
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script th:src="@{/js/tailwindcss.js}"></script>
 <!--    <link rel="stylesheet" th:href="@{/css/main.css}">-->
 </head>
 <body>
-<div class="w-screen h-screen p-0 m-0 dark:bg-gray-800 dark:text-white absolute p-2">
+<div class="w-screen h-screen overflow-x-hidden overflow-y-auto p-0 m-0 dark:bg-gray-800 dark:text-white absolute p-2">
     <div class="w-61 flex flex-wrap align-center justify-between mb-2">
         <form enctype="multipart/form-data" class="w-fit relative mb-2">
             <label for="file" class="cursor-pointer text-white dark:bg-sky-600 dark:hover:bg-sky-700 dark:active:bg-sky-800 bg-sky-400 hover:bg-sky-500 active:bg-sky-600 rounded-lg w-fit relative duration-300 block box-border p-2">上传文件</label>

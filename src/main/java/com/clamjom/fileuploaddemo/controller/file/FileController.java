@@ -8,9 +8,11 @@ import com.clamjom.fileuploaddemo.service.FilesService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
 import org.redisson.api.RMap;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.FileCopyUtils;
@@ -24,11 +26,13 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-@Controller
 @Slf4j
+@RestController
 public class FileController {
     @Autowired
     private FilesService filesService;
@@ -36,34 +40,42 @@ public class FileController {
     @Autowired
     private RedissonClient redissonClient;
 
+    private final ConcurrentMap<String, String> fileMap = new ConcurrentHashMap<>();
+
     @PostMapping("/upload")
-    @ResponseBody
-    public String uploadFile(PartFile partFile) throws IOException, ExecutionException, InterruptedException {
+    public String test(PartFile partFile) throws IOException, ExecutionException, InterruptedException {
         // 验证
         if(!FileHandler.verifyPartFile(partFile)) return "Failed";
         // 记录文件名与文件ID，并向文件总写入当前片段
-        String fileId;
-        RMap<String, String> redissonMap = redissonClient.getMap(partFile.getName());
-        if(!redissonMap.containsKey(partFile.getName())){
-            fileId = UUID.randomUUID().toString();
-            redissonMap.put(partFile.getName(), fileId);
-            redissonMap.expire(24, TimeUnit.HOURS);
-        }else{
-            fileId = redissonMap.get(partFile.getName());
+        RLock lock = redissonClient.getLock(partFile.getName());
+        boolean tryLock = false;
+        try{
+            tryLock = lock.tryLock(30, 180, TimeUnit.SECONDS);
+        }catch(Exception e){
+            log.error(e.getMessage());
         }
+        if(!tryLock) return "Failed";
+        String fileId;
+        Optional<String> fileOpt = Optional.ofNullable(fileMap.get(partFile.getName()));
+        if(fileOpt.isEmpty()){
+            fileId = UUID.randomUUID().toString();
+            fileMap.put(partFile.getName(), fileId);
+        }else{
+            fileId = fileMap.get(partFile.getName());
+        }
+        lock.unlock();
         boolean writeResult = FileHandler.integrationFile(partFile, fileId);
         if(partFile.getCurrent() == partFile.getTotal() - 1){
             filesService.save(partFile, fileId);
-            redissonMap.remove(partFile.getName());
+            fileMap.remove(partFile.getName());
         }
         if(!writeResult) return "Failed";
         return "OK";
     }
 
+    @Deprecated
     @PostMapping("/uploadXml")
-    @ResponseBody
     public String uploadFileInXml(@RequestParam("file") MultipartFile file) throws IOException{
-//        MultipartFile file = param.get("file");
         assert file != null;
         String filename = file.getName();
         log.info(filename);
@@ -95,13 +107,13 @@ public class FileController {
             return;
         }
         FileInputStream fis = new FileInputStream(file);
+        response.setHeader("Content-Length", String.valueOf(file.length()));
         response.setContentType(files.getFileType());
         FileCopyUtils.copy(fis, response.getOutputStream());
         fis.close();
     }
 
     @DeleteMapping("/delete")
-    @ResponseBody
     public String deleteFile(@Param("filename") String filename){
         Files files = filesService.getByName(filename);
         Optional<Files> fileOpt = Optional.ofNullable(files);
@@ -118,7 +130,6 @@ public class FileController {
     }
 
     @GetMapping("/allFiles")
-    @ResponseBody
     public String fileList(){
         return JSON.toJSONString(filesService.getAllFileName());
     }

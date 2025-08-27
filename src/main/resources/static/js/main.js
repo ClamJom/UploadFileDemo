@@ -253,8 +253,22 @@ function handleUpload(url, file,
     let total = Math.ceil(file.size / chunkSize);   // 总片段数
     let {partElements, speedBlock} = initPartElements(id, file, chunkSize);    // 状态块，渲染在前端的DOM元素，用于展示小块的上传状态
 
+    let uploadedParts = [];
+
+    getUploadedParts(name).then(rsp=>{
+        uploadedParts = rsp;
+    })
+
     // 片段上传核心
     const uploadCore = async (chunkHashData, index) => new Promise((res, rej)=>{
+        if(uploadedParts.includes(chunkHashData.hash)){
+            res({
+                id: id,
+                index: index,
+                state: "OK"
+            })
+            return;
+        }
         // 小块的上传核心，使用Promise封装。封装每一个小块的数据并使用fetch上传，返回上传结果
         // 构建FormData上传文件及其相关参数
         const formData = new FormData();
@@ -292,7 +306,6 @@ function handleUpload(url, file,
      * 文件上传停止回调
      * @param record :RecordItem
      * @param msg :string
-     * @constructor
      */
     function HandleStopUpload(record, msg){
         getAllFiles();
@@ -532,6 +545,12 @@ function deleteFile(filename){
     }).then(res=>res.text()).then(()=>{
         getAllFiles();
     });
+}
+
+async function getUploadedParts(filename){
+    return fetch(`/uploadedParts?fileName=${filename}`,{
+        method: "GET"
+    }).then(rsp=>rsp.json());
 }
 
 // 通过消息生成SHA-256摘要

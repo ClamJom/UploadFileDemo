@@ -24,6 +24,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -54,14 +55,20 @@ public class FileController {
         }
         if(!tryLock) return "Failed";
         String fileId = FileHandler.getFileId(partFile.getName());
-        lock.unlock();
         boolean writeResult = FileHandler.integrationFile(partFile, fileId);
+        FileHandler.uploadedPart(partFile.getName(), partFile.getMd5());
+        lock.unlock();
         if(partFile.getCurrent() == partFile.getTotal() - 1){
             filesService.save(partFile, fileId);
             FileHandler.removeFileId(partFile.getName());
         }
         if(!writeResult) return "Failed";
         return "OK";
+    }
+
+    @GetMapping("/uploadedParts")
+    public List<String> getUploadedParts(@Param("fileName") String fileName){
+        return FileHandler.getUploadedParts(fileName);
     }
 
     @Deprecated

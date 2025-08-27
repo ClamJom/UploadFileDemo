@@ -8,6 +8,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.ClassUtils;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -27,6 +30,8 @@ public class FileHandler {
 
     private static final ConcurrentMap<String, String> fileIdMap = new ConcurrentHashMap<>();
 
+    private static final ConcurrentMap<String, List<String>> uploadedPartMap = new ConcurrentHashMap<>();
+
     public static String getFileId(String fileName){
         String fileId = null;
         if(!fileIdMap.containsKey(fileName)){
@@ -40,6 +45,28 @@ public class FileHandler {
 
     public static void removeFileId(String fileName){
         fileIdMap.remove(fileName);
+        uploadedPartMap.remove(fileName);
+    }
+
+    public static void uploadedPart(String fileName, String partHash){
+        Optional<List<String>> opt = Optional.ofNullable(uploadedPartMap.get(fileName));
+        if(opt.isEmpty()){
+            uploadedPartMap.put(fileName, new ArrayList<>());
+        }
+        if(!uploadedPartMap.get(fileName).contains(partHash))
+            uploadedPartMap.get(fileName).add(partHash);
+    }
+
+    public static List<String> getUploadedParts(String fileName){
+        Optional<List<String>> opt = Optional.ofNullable(uploadedPartMap.get(fileName));
+        if(opt.isEmpty()){
+            return new ArrayList<>();
+        }
+        return uploadedPartMap.get(fileName);
+    }
+
+    public static void clearUploadedParts(String fileName){
+        uploadedPartMap.remove(fileName);
     }
 
     /**

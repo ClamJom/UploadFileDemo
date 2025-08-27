@@ -40,8 +40,6 @@ public class FileController {
     @Autowired
     private RedissonClient redissonClient;
 
-    private final ConcurrentMap<String, String> fileMap = new ConcurrentHashMap<>();
-
     @PostMapping("/upload")
     public String test(PartFile partFile) throws IOException, ExecutionException, InterruptedException {
         // 验证
@@ -55,19 +53,12 @@ public class FileController {
             log.error(e.getMessage());
         }
         if(!tryLock) return "Failed";
-        String fileId;
-        Optional<String> fileOpt = Optional.ofNullable(fileMap.get(partFile.getName()));
-        if(fileOpt.isEmpty()){
-            fileId = UUID.randomUUID().toString();
-            fileMap.put(partFile.getName(), fileId);
-        }else{
-            fileId = fileMap.get(partFile.getName());
-        }
+        String fileId = FileHandler.getFileId(partFile.getName());
         lock.unlock();
         boolean writeResult = FileHandler.integrationFile(partFile, fileId);
         if(partFile.getCurrent() == partFile.getTotal() - 1){
             filesService.save(partFile, fileId);
-            fileMap.remove(partFile.getName());
+            FileHandler.removeFileId(partFile.getName());
         }
         if(!writeResult) return "Failed";
         return "OK";

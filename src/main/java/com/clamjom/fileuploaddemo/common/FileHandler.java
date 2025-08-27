@@ -8,6 +8,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.ClassUtils;
 
 import java.io.*;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 @Component
 @Slf4j
@@ -20,6 +23,23 @@ public class FileHandler {
     @PostConstruct
     public void init(){
         path = ClassUtils.getDefaultClassLoader().getResource("").getPath() + _savePath;
+    }
+
+    private static final ConcurrentMap<String, String> fileIdMap = new ConcurrentHashMap<>();
+
+    public static String getFileId(String fileName){
+        String fileId = null;
+        if(!fileIdMap.containsKey(fileName)){
+            fileId = UUID.randomUUID().toString();
+            fileIdMap.put(fileName, fileId);
+        }else{
+            fileId = fileIdMap.get(fileName);
+        }
+        return fileId;
+    }
+
+    public static void removeFileId(String fileName){
+        fileIdMap.remove(fileName);
     }
 
     /**

@@ -1,3 +1,20 @@
+/**
+ * 记录元件，一个文件对应一个记录，这个类是用来标注注释的
+ */
+class RecordItem{
+    id// 文件ID
+    uploadedParts // 已上传的文件片段下标列表
+    uploadFunc  // 上传函数
+    data   // 片段数据、MD5值列表
+    total// 总片段数量
+    startTime // 传输创建时间
+    lastCheckTime    // 最近一次进度检测的时间
+    uploadedSize // 已上传文件大小，字节
+    progressTimer  // 计时器ID。该计时器用于计算上传速度，上传结束后清除
+    speed    // 上传速度，依照单位分为各个大小的进度
+    speedUnit   //速度单位
+}
+
 class UploadRecord{
 
     #uploadRecord;
@@ -9,12 +26,30 @@ class UploadRecord{
     }
 
     /**
+     * 传输速度计算
+     * @param uploadedSize :number  已上传大小，字节
+     * @param elapsedTime  :number  经过的时间，秒
+     * @returns {(number|string)[]}
+     */
+    calcSpeed(uploadedSize, elapsedTime){
+        let rawSpeed = uploadedSize / elapsedTime;
+        const speedUnit = ['byte/s', 'kb/s', 'mb/s', 'gb/s', 'tb/s'];
+        for(const item of speedUnit){
+            if(rawSpeed < 1000) return [rawSpeed.toFixed(2), item];
+            rawSpeed /= 1000;
+        }
+        return [rawSpeed.toFixed(2), speedUnit[speedUnit.length - 1]];
+    }
+
+    /**
      * 添加记录
      * @param fileId :string 文件ID
      * @param data :[object] 数据块列表
-     * @param handleDataUpload :function
+     * @param handleDataUpload :function    片段上传函数
+     * @param handleProgress :function      进度回调函数
+     * @return {Promise<RecordItem>}
      */
-    async addUploadRecord(fileId, data, handleDataUpload){
+    async addUploadRecord(fileId, data, handleDataUpload, handleProgress=null){
         this.#uploadRecord = this.#uploadRecord.filter(record=>{
             return record.id !== fileId;
         });
@@ -24,8 +59,25 @@ class UploadRecord{
             uploadFunc: handleDataUpload,
             data: data,     // 片段数据、MD5值列表
             total: data.length, // 总片段数量
-            startTime: new Date() // 传输创建时间
+            startTime: new Date(), // 传输创建时间
+            lastCheckTime: new Date(),    // 最近一次进度检测的时间
+            uploadedSize: 0,     // 已上传文件大小，字节
+            progressTimer: -1,   // 计时器ID。该计时器用于计算上传速度，上传结束后清除
+            speed: -1,    // 上传速度，依照单位分为各个大小的进度
+            speedUnit: 'byte/s'
         }
+        newRecord.progressTimer = setInterval(() => {
+            const currentTime = new Date();
+            const elapsedTime = (currentTime - newRecord.lastCheckTime) / 1000;
+            newRecord.lastCheckTime = currentTime;
+            const [speed, speedUnit] = this.calcSpeed(newRecord.uploadedSize, elapsedTime);
+            newRecord.uploadedSize = 0;
+            newRecord.speed = speed;
+            newRecord.speedUnit = speedUnit;
+            if(handleProgress){
+                handleProgress(newRecord);
+            }
+        }, 500);
         this.#uploadRecord.push(newRecord);
         window.sessionStorage.setItem(fileId, "[]");
         return newRecord;
@@ -33,6 +85,10 @@ class UploadRecord{
 
     async deleteUploadRecord(fileId){
         this.#uploadRecord = this.#uploadRecord.filter((record)=>{
+            if(record.progressTimer !== -1) clearInterval(record.progressTimer);
+            if(record.speed === -1){
+                [record.speed, record.speedUnit] = this.calcSpeed(record.uploadedSize, record.lastCheckTime - record.startTime);
+            }
             return record.id !== fileId;
         });
         if(window.sessionStorage.getItem(fileId)){
@@ -49,7 +105,12 @@ class UploadRecord{
         });
     }
 
-    async readRecord(fileId){
+    /**
+     * 读取文件记录
+     * @param fileId
+     * @returns {Promise<undefined|RecordItem>}
+     */
+    async readRecord(fileId) {
         const recordList = this.#uploadRecord.filter(record=> record.id === fileId);
         if(recordList.length === 0)return undefined;
         return recordList[0];
@@ -67,13 +128,14 @@ class UploadRecord{
     }
 
     async setUploadingState(state){
-        if(!this.#enableUpload){
+        const previousState = this.#enableUpload;
+        this.#enableUpload = state;
+        if(!previousState && this.#enableUpload){
             // 处理开始上传
             this.#uploadRecord.forEach(record=>{
                 record.uploadFunc(record.data);
             });
         }
-        this.#enableUpload = state;
     }
 
     getUploadingState() {return this.#enableUpload;}
@@ -135,7 +197,7 @@ function uploadXml(){
  * @param id
  * @param file
  * @param chunkSize
- * @returns {*[]}
+ * @return
  */
 function initPartElements(id, file, chunkSize){
     let previewContainer = document.querySelector("#preview");
@@ -160,7 +222,14 @@ function initPartElements(id, file, chunkSize){
         stateContainer.appendChild(stateBlock);
         blockList.push(stateBlock);
     }
-    return blockList;
+
+    let speedBlock = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
+    speedBlock.innerText = "分割处理中.....";
+    el.appendChild(speedBlock);
+    return {
+        partElements: blockList,
+        speedBlock: speedBlock
+    };
 }
 
 /**
@@ -182,7 +251,7 @@ function handleUpload(url, file,
     let name = file.name;   //文件名
     let type = file.type;   // 文件类型
     let total = Math.ceil(file.size / chunkSize);   // 总片段数
-    let partElements = initPartElements(id, file, chunkSize);    // 状态块，渲染在前端的DOM元素，用于展示小块的上传状态
+    let {partElements, speedBlock} = initPartElements(id, file, chunkSize);    // 状态块，渲染在前端的DOM元素，用于展示小块的上传状态
 
     // 片段上传核心
     const uploadCore = async (chunkHashData, index) => new Promise((res, rej)=>{
@@ -198,7 +267,7 @@ function handleUpload(url, file,
         formData.append("partSize", chunkSize.toString());
         fetch(url, {
             method: "POST",
-            body: formData
+            body: formData,
         }).then(response=> response.text()).then(data=> {
             res({
                 id: id,
@@ -215,30 +284,67 @@ function handleUpload(url, file,
     });
 
     // 文件开始上传回调
-    function HandleStartUpload(){}
-
-    // 文件上传停止回调
-    function HandleStopUpload(msg){
-        getAllFiles();
+    function HandleStartUpload(){
+        speedBlock.innerText = `开始上传，共有${total}个块`;
     }
 
-    // 块上传开始回调
+    /**
+     * 文件上传停止回调
+     * @param record :RecordItem
+     * @param msg :string
+     * @constructor
+     */
+    function HandleStopUpload(record, msg){
+        getAllFiles();
+        if(record.speed === -1){
+            [record.speed, record.speedUnit] = mainRecord.calcSpeed(record.uploadedSize, new Date() - record.startTime);
+            speedBlock.innerText = `${record.speed} ${record.speedUnit}`;
+        }
+    }
+
+    /**
+     * 进度处理函数回调
+     * @param record :RecordItem
+     */
+    function HandleProgress(record){
+        // console.log(`${record.speed}${record.speedUnit}`);
+        speedBlock.innerText = `${record.speed} ${record.speedUnit}`;
+    }
+
+    /**
+     * 块上传开始回调
+     * @param record :RecordItem
+     * @param blockIndex :number
+     */
     function HandleBlockStartUpload(record, blockIndex){}
 
-    // 块上传停止回调
+    /**
+     * 块上传停止回调
+     * @param record :RecordItem
+     * @param blockIndex :number
+     */
     function HandleBlockStopUpload(record, blockIndex){}
 
-    // 片段开始上传回调
+    /**
+     * 片段开始上传回调
+     * @param record :RecordItem
+     * @param index :number
+     */
     function HandlePartStartUpload(record, index){
         partElements[index].setAttribute("uploading", "");
     }
 
-    // 片段上传响应回调
+    /**
+     * 片段上传响应回调
+     * @param record :RecordItem
+     * @param data
+     */
     function HandleResponse(record, data){
         if(partElements[data.index].hasAttribute("uploading")){
             partElements[data.index].removeAttribute("uploading");
         }
         if(data.state === "OK"){
+            record.uploadedSize += chunkSize;
             partElements[data.index].setAttribute("ok", "");
         }else{
             partElements[data.index].setAttribute("error", "");
@@ -250,14 +356,13 @@ function handleUpload(url, file,
      * @param data :Array
      */
     const uploadBlocks = async (data) => {
-        HandleStartUpload();
         // 获取已上传的片段
         const states = await mainRecord.readRecordState(id);
         // 获取当前记录
         let currentRecord = null;
         mainRecord.readRecord(id).then(record=>{
             if(!record){
-                mainRecord.addUploadRecord(id, data, uploadBlocks).then(newRecord=>{
+                mainRecord.addUploadRecord(id, data, uploadBlocks, HandleProgress).then(newRecord=>{
                     currentRecord = newRecord;
                     currentRecord.data = data;
                 });
@@ -356,11 +461,11 @@ function handleUpload(url, file,
             Promise.all(taskBlockPool).then(() => {
                 uploadCore(lastPart, total - 1).then(res => {
                     HandleResponse(currentRecord, res);
-                    HandleStopUpload("Done");
+                    HandleStopUpload(currentRecord, "Done");
                     mainRecord.deleteUploadRecord(id).then();
                 });
             }).catch(e=>{
-                HandleStopUpload(e);
+                HandleStopUpload(currentRecord, e);
             });
         }else{
             // 当前文件大于10M时，每次上传10M直至上传完成
@@ -375,12 +480,12 @@ function handleUpload(url, file,
                     }else{
                         uploadCore(lastPart, total - 1).then(res => {
                             HandleResponse(currentRecord, res);
-                            HandleStopUpload("Done");
+                            HandleStopUpload(currentRecord, "Done");
                             mainRecord.deleteUploadRecord(id).then();
                         });
                     }
                 }).catch(e=>{
-                    HandleStopUpload(e);
+                    HandleStopUpload(currentRecord, e);
                 });
             }
             blockUpload(0);
@@ -391,6 +496,7 @@ function handleUpload(url, file,
     worker.postMessage({file: file, chunkSize: chunkSize});
     // 将文件分块后，将最后一块作为整合信号，在所有的部分传输完成之后传输
     worker.onmessage = (e)=>{
+        HandleStartUpload();
         // e.data.length返回的值可能是0，只有当结果正确时才开始上传
         if(e.data.length >= total){
             uploadBlocks(e.data).then();
@@ -423,7 +529,7 @@ function getAllFiles(){
 function deleteFile(filename){
     fetch(`/delete?filename=${filename}`, {
         method: "DELETE"
-    }).then(res=>res.text()).then(res=>{
+    }).then(res=>res.text()).then(()=>{
         getAllFiles();
     });
 }

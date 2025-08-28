@@ -4,7 +4,9 @@
 
 效果如下：
 
-<video src="./video/demo.mp4"></video>
+
+https://github.com/user-attachments/assets/bf825b90-8983-4e97-8de5-67fa19cf7263
+
 
 旧版：
 
